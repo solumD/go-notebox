@@ -1,2 +1,1 @@
-# notebox
 # go-notebox
