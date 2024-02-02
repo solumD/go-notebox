@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
 )
 
 // Создается функция-обработчик "home", которая записывает байтовый слайс, содержащий
-// текст "Привет из Snippetbox" как тело ответа.
+// текст "Привет из NoteBox" как тело ответа.
 func home(w http.ResponseWriter, r *http.Request) {
-
 	// Проверяется, если текущий путь URL запроса точно совпадает с шаблоном "/". Если нет, вызывается
 	// функция http.NotFound() для возвращения клиенту ошибки 404.
 	if r.URL.Path != "/" {
@@ -18,7 +18,32 @@ func home(w http.ResponseWriter, r *http.Request) {
 		return //Завершение работы клиента, чтобы функция не вывела "Привет из NoteBox"
 	}
 
-	w.Write([]byte("Привет из NoteBox"))
+	files := []string{
+		"./ui/html/home.page.tmpl",
+		"./ui/html/base.layout.tmpl",
+		"./ui/html/footer.partial.tmpl",
+	}
+
+	// Используем функцию template.ParseFiles() для чтения файла шаблона.
+	// Если возникла ошибка, мы запишем детальное сообщение ошибки и
+	// используя функцию http.Error() мы отправим пользователю
+	// ответ: 500 Internal Server Error (Внутренняя ошибка на сервере)
+	ts, err := template.ParseFiles(files...)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Internal server error", 500)
+		return
+	}
+
+	// Затем мы используем метод Execute() для записи содержимого
+	// шаблона в тело HTTP ответа. Последний параметр в Execute() предоставляет
+	// возможность отправки динамических данных в шаблон.
+	err = ts.Execute(w, nil)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal server error", 500)
+	}
+
 }
 
 // Обработчик для отображения содержимого заметки.
@@ -54,19 +79,3 @@ func createNote(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("Создания новой записи..."))
 }
-
-func main() {
-	// Используется функция http.NewServeMux() для инициализации нового рутера, затем
-	// функцию "home" регистрируется как обработчик для URL-шаблона "/",
-	// аналогично "home" регистрируются showNote и createNote
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", home)
-	mux.HandleFunc("/note", showNote)
-	mux.HandleFunc("/note/create", createNote)
-
-	log.Println("Запуск веб-сервера на http://127.0.0.1:4000")
-	err := http.ListenAndServe(":4000", mux)
-	log.Fatal(err)
-}
-
-//
